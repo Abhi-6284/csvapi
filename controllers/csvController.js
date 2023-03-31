@@ -5,13 +5,8 @@ exports.create = async (req, res) => {
     if (req.file == undefined) {
       return res.status(400).send("Please upload a CSV file!");
     }
-
     let users = [];
     let file = path.join(__dirname, '../', '/public/csv/' + req.file.filename);
-
-    // console.log("path", file);
-
-
     let emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
     let alphabeticPattern = /^[A-Za-z]+$/;
     let successCount = 0;
@@ -26,16 +21,22 @@ exports.create = async (req, res) => {
       .on("data", (row) => {
         successCount++;
         users.push(row);
-        console.log(`ROW=${JSON.stringify(row)}`)
+        // console.log(`ROW=${JSON.stringify(row)}`)
       })
       .on('data-invalid', (row, rowNumber) => {
         errorCount++;
         errorArray.push(`Invalid [rowNumber=${rowNumber}] [row=${JSON.stringify(row)}]`)
-        console.log(`Invalid [rowNumber=${rowNumber}] [row=${JSON.stringify(row)}]`)
+        // console.log(`Invalid [rowNumber=${rowNumber}] [row=${JSON.stringify(row)}]`)
       })
       .on("end", (rowCount) => {
-        if (errorCount < 0) {
-          console.log(`Parsed ${rowCount} rows`)
+         // Delete the CSV file
+        fs.unlink(file, (err) => {
+          if (err) {
+            console.error(err);
+          }
+        });
+        if (errorArray.length == 0) {
+          // console.log(`Parsed ${rowCount} rows`)
           User.insertMany(users, {
             validate: true,
           })
@@ -48,11 +49,10 @@ exports.create = async (req, res) => {
               });
             })
             .catch((error) => {
-              console.log(error);
+              // console.log(error);
               res.status(500).json({
                 error: error.message,
                 failed: `Fail to import ${users.length} row into database!`,
-
               });
             });
         }else{
@@ -63,8 +63,8 @@ exports.create = async (req, res) => {
         }
       });
   } catch (error) {
-    console.log(error);
-    console.log(error.message);
+    // console.log(error);
+    // console.log(error.message);
     res.status(500).json({
       error: error.message,
       failed: "Could not upload the file: " + req.file.originalname,
